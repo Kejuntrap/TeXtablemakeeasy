@@ -1,6 +1,7 @@
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Dimension;
+import java.awt.FlowLayout;
 import java.awt.GridLayout;
 import java.awt.Point;
 import java.awt.event.ActionEvent;
@@ -33,7 +34,7 @@ public class TeX_MATRIX_EASY extends JFrame{
 	static int matrix_w=3;
 	static JTextField[][] tx;
 	static JPanel[] txp;
-	static String[] menu= {"生成","列を増やす","列を減らす","行を増やす","行を減らす","CSV(UTF-8)","CSV(SHIFT-JIS)"};
+	static String[] menu= {"生成","列を増やす","列を減らす","行を増やす","行を減らす","CSV読込(UTF-8)","CSV読込(SHIFT-JIS)"};
 	static JButton[] UI1=new JButton[7];
 	static JPanel buttonpanel=new JPanel();
 	static JScrollPane text_matrix;
@@ -41,7 +42,10 @@ public class TeX_MATRIX_EASY extends JFrame{
 	static JFrame mainframe;
 	static String[][] data;
 	static JFrame subWindow;
-	static JButton delete;
+	static JButton delete,invert;
+	static JTextField caption;
+	static JLabel captitle;
+	static JPanel captionpanel;
 	static int forcused_text_x=1;
 	static int forcused_text_y=1;
 	static Color forcused_color=new Color(0.75f,1.0f,1.0f);
@@ -49,29 +53,54 @@ public class TeX_MATRIX_EASY extends JFrame{
 	static int w=1200;
 	static JPanel guide=new JPanel();
 	static JLabel coord;
-	static JButton invert;
 	static JPanel toolpanel=new JPanel();
 	static String[][] inv;
 
 	public TeX_MATRIX_EASY() {
+		data=new String[matrix_h][matrix_w];
 		init();
 		tx[forcused_text_y][forcused_text_x].requestFocusInWindow();
 	}
+
 	public static void main(String[] args) {
 		new TeX_MATRIX_EASY();
 	}
+
 	public void init() {
+		mainframe=null;
+		subWindow=null;
+		txp=null;
+		buttonpanel=null;
+		content_p=null;
+		captionpanel=null;
+		guide=null;
+		toolpanel=null;
+		captionpanel=null;
+
+		buttonpanel=new JPanel();
+		guide=new JPanel();
+		toolpanel=new JPanel();
+
 		subWindow=new JFrame("ツール");
 		subWindow.setSize(400,200);
 		delete=new JButton("表の内容をすべて消去する");
 		toolpanel.setLayout(new BoxLayout(toolpanel, BoxLayout.Y_AXIS));
 		invert=new JButton("表の転置");
+		caption=new JTextField(20);
+		captitle =new JLabel("キャプション");
+		captionpanel = new JPanel();
+		captionpanel.setLayout(new FlowLayout());
+		captionpanel.add(captitle);
+		captionpanel.add(caption);
+		toolpanel.add(captionpanel);
 		delete.addActionListener(new deletecontents());
 		invert.addActionListener(new invertcontents());
 		toolpanel.add(delete);
 		toolpanel.add(invert);
 		subWindow.add(toolpanel);
+		subWindow.setDefaultCloseOperation(EXIT_ON_CLOSE);
 		subWindow.setVisible(true);
+
 		coord=new JLabel("("+forcused_text_x+" , "+forcused_text_y+")");
 		guide.add(coord);
 		mainframe=new JFrame();
@@ -91,13 +120,6 @@ public class TeX_MATRIX_EASY extends JFrame{
 		UI1[4].addActionListener(new DecRow());			//行を減らす
 		UI1[5].addActionListener(new LoadCSVU8());		//CSVを読み込み
 		UI1[6].addActionListener(new LoadCSVSJ());		//CSVを読み込み
-
-		data=new String[matrix_h][matrix_w];
-		for(int i=0; i<matrix_h; i++) {
-			for(int j=0; j<matrix_w; j++) {
-				data[i][j]="";
-			}
-		}
 
 		tx=new JTextField[matrix_h+1][matrix_w+1];
 		txp=new JPanel[matrix_h+1];
@@ -127,7 +149,7 @@ public class TeX_MATRIX_EASY extends JFrame{
 						tx[i][j].setFocusable(false);
 					}
 					else {
-						tx[i][j]=new JTextField("");
+						tx[i][j]=new JTextField();
 					}
 					tx[i][j].setPreferredSize(new Dimension(190,30));
 					tx[i][j].addFocusListener(new excel_like_perform());
@@ -150,24 +172,7 @@ public class TeX_MATRIX_EASY extends JFrame{
 	}
 
 	public void refresh(int old_matrix_h,int old_matrix_w) {
-		subWindow=new JFrame("ツール");
-		subWindow.setSize(400,200);
-		delete=new JButton("表の内容をすべて消去する");
-		toolpanel.setLayout(new BoxLayout(toolpanel, BoxLayout.Y_AXIS));
-		invert=new JButton("表の転置");
-		delete.addActionListener(new deletecontents());
-		invert.addActionListener(new invertcontents());
-		subWindow.add(toolpanel);
-		subWindow.setVisible(true);
-
-
-		guide.add(coord);
-		mainframe=new JFrame();
-		mainframe.setSize(w,h);
-		mainframe.setTitle("TeX表ラクラク作成");
-		mainframe.add(buttonpanel,BorderLayout.NORTH);
-		content_p = new JPanel();
-		String[][] newdata=new String[matrix_h][matrix_w];
+		String[][] newdata=new String[matrix_h+1][matrix_w+1];
 		for(int i=0; i<matrix_h; i++) {
 			for(int j=0; j<matrix_w; j++) {
 				newdata[i][j]="";
@@ -179,126 +184,23 @@ public class TeX_MATRIX_EASY extends JFrame{
 			}
 		}
 		data=newdata.clone();
+		init();
+		loadData();
 		newdata=null;
-		tx=new JTextField[matrix_h+1][matrix_w+1];
-		txp=new JPanel[matrix_h+1];
-		for(int i=0; i<=matrix_h; i++) {
-			txp[i]=new JPanel();
-			txp[i].setLayout(new BoxLayout(txp[i], BoxLayout.X_AXIS));
-			for(int j=0; j<=matrix_w; j++) {
-				if(i==0) {
-					if(j==0) {
-						tx[i][j]=new JTextField("");
-						tx[i][j].setEditable(false);
-						tx[i][j].setFocusable(false);
-					}
-					else {
-						tx[i][j]=new JTextField(""+j+"");
-						tx[i][j].setHorizontalAlignment(JTextField.CENTER);
-						tx[i][j].setEditable(false);
-						tx[i][j].setFocusable(false);
-					}
-					tx[i][j].setPreferredSize(new Dimension(120,30));
-				}
-				else {
-					if(j==0) {
-						tx[i][j]=new JTextField(""+i+"");
-						tx[i][j].setHorizontalAlignment(JTextField.RIGHT);
-						tx[i][j].setEditable(false);
-						tx[i][j].setFocusable(false);
-					}
-					else {
-						tx[i][j]=new JTextField(data[i-1][j-1]);
-					}
-					tx[i][j].setPreferredSize(new Dimension(190,30));
-				}
-				txp[i].add(tx[i][j]);
-				tx[i][j].addFocusListener(new excel_like_perform());
-				tx[i][j].addKeyListener(new excel_like_perform());
-			}
-		}
-		text_matrix = new JScrollPane(content_p);
-		content_p.setLayout(new BoxLayout(content_p, BoxLayout.Y_AXIS));
-		mainframe.add(text_matrix,BorderLayout.CENTER);
-		mainframe.add(guide,BorderLayout.SOUTH);
-		for(int i=0; i<=matrix_h; i++) {
-			this.revalidate();
-			content_p.add(txp[i]);
-			content_p.doLayout();
-		}
-		mainframe.setDefaultCloseOperation(EXIT_ON_CLOSE);
-		mainframe.setVisible(true);
-
 	}
 
 	public void OpenCSV() {
-		subWindow=new JFrame("ツール");
-		subWindow.setSize(400,200);
-		delete=new JButton("表の内容をすべて消去する");
-		toolpanel.setLayout(new BoxLayout(toolpanel, BoxLayout.Y_AXIS));
-		invert=new JButton("表の転置");
-		delete.addActionListener(new deletecontents());
-		invert.addActionListener(new invertcontents());
-		subWindow.add(toolpanel);
-		subWindow.setVisible(true);
-		guide.add(coord);
-		mainframe=new JFrame();
-		mainframe.setSize(w,h);
-		mainframe.setTitle("TeX表ラクラク作成");
-		mainframe.add(buttonpanel,BorderLayout.NORTH);
-		content_p = new JPanel();
-		tx=new JTextField[matrix_h+1][matrix_w+1];
-		txp=new JPanel[matrix_h+1];
-		for(int i=0; i<=matrix_h; i++) {
-			txp[i]=new JPanel();
-			txp[i].setLayout(new BoxLayout(txp[i], BoxLayout.X_AXIS));
-			for(int j=0; j<=matrix_w; j++) {
-				if(i==0) {
-					if(j==0) {
-						tx[i][j]=new JTextField("");
-						tx[i][j].setEditable(false);
-						tx[i][j].setFocusable(false);
-					}
-					else {
-						tx[i][j]=new JTextField(""+j+"");
-						tx[i][j].setHorizontalAlignment(JTextField.CENTER);
-						tx[i][j].setEditable(false);
-						tx[i][j].setFocusable(false);
-					}
-					tx[i][j].setPreferredSize(new Dimension(120,30));
-				}
-				else {
-					if(j==0) {
-						tx[i][j]=new JTextField(""+i+"");
-						tx[i][j].setHorizontalAlignment(JTextField.RIGHT);
-						tx[i][j].setEditable(false);
-						tx[i][j].setFocusable(false);
-					}
-					else {
-						tx[i][j]=new JTextField(data[i-1][j-1]);
-						tx[i][j].setText(data[i-1][j-1]);
-					}
-					tx[i][j].setPreferredSize(new Dimension(190,30));
-				}
-				txp[i].add(tx[i][j]);
-				tx[i][j].addFocusListener(new excel_like_perform());
-				tx[i][j].addKeyListener(new excel_like_perform());
-			}
-		}
-		text_matrix = new JScrollPane(content_p);
-		content_p.setLayout(new BoxLayout(content_p, BoxLayout.Y_AXIS));
-		mainframe.add(text_matrix,BorderLayout.CENTER);
-		mainframe.add(guide,BorderLayout.SOUTH);
-		for(int i=0; i<=matrix_h; i++) {
-			this.revalidate();
-			content_p.add(txp[i]);
-			content_p.doLayout();
-		}
-		mainframe.setDefaultCloseOperation(EXIT_ON_CLOSE);
-		mainframe.setVisible(true);
+		init();
+		loadData();
 	}
 
-
+	public void loadData() {
+		for(int i=1; i<=matrix_h; i++) {
+			for(int j=1; j<=matrix_w; j++) {
+				tx[i][j].setText(data[i-1][j-1]);
+			}
+		}
+	}
 	public void dataSave() {
 		for(int i=1; i<=matrix_h; i++) {
 			for(int j=1; j<=matrix_w; j++) {
@@ -420,12 +322,13 @@ public class TeX_MATRIX_EASY extends JFrame{
 		public void actionPerformed(ActionEvent e) {
 			JFrame show=new JFrame("ソース");
 			JTextArea txa=new JTextArea();
-			txa.append("\\begin{table}[h]\n");
+			txa.append("\\begin{table}[H]\n");
 			StringBuilder sb=new StringBuilder();
 			for(int i=0; i<matrix_w; i++) {
 				sb.append("l");
 			}
-			txa.append("\t \\begin{tabular}{"+sb.toString()+"}\n");
+			txa.append("\\begin{center} \n");
+			txa.append("\t \\begin{tabular}{"+sb.toString()+"}\\hline\n");
 			for(int i=0; i<matrix_h; i++) {
 				sb=new StringBuilder();
 				sb.append("\t\t");
@@ -435,19 +338,25 @@ public class TeX_MATRIX_EASY extends JFrame{
 						sb.append(" &");
 					}
 				}
-				if(i!=matrix_h-1) {
+				if(i==0) {
+					sb.append("\\\\\\hline\n");
+				}
+				else if(i!=matrix_h-1) {
 					sb.append(" \\\\\n");
 				}
 				else if(i==matrix_h-1) {
-					sb.append("\n");
+					sb.append("\\\\\\hline\n");
 				}
 				txa.append(sb.toString());
 			}
 			txa.append("\t\\end{tabular}\n");
+			txa.append("\t \\end{center} \n");
+			txa.append("\t \\caption{"+caption.getText()+"} \n");
 			txa.append("\\end{table}\n");
 
 			show.add(txa,BorderLayout.CENTER);
 			show.setSize(400, 300);
+			//show.setDefaultCloseOperation(EXIT_ON_CLOSE);
 			show.setVisible(true);
 		}
 	}
@@ -510,7 +419,7 @@ public class TeX_MATRIX_EASY extends JFrame{
 			JFileChooser csv_get=new JFileChooser();
 			FileNameExtensionFilter csv_filter = new FileNameExtensionFilter("*.csv","csv");
 			csv_get.setFileFilter(csv_filter);
-			if(csv_get.showOpenDialog(parent) == JFileChooser.APPROVE_OPTION) {
+			if(csv_get.showOpenDialog(parent) == JFileChooser.APPROVE_OPTION) {    // (3), (4)
 				loadcsv = csv_get.getSelectedFile();
 			}
 			if(csv_get!=null) {
@@ -540,6 +449,7 @@ public class TeX_MATRIX_EASY extends JFrame{
 						tmp= new String[1];
 						tmp[0]="";
 					}
+
 					while(read!=null) {
 						read=br.readLine();
 						if(read!=null) {
